@@ -8,11 +8,19 @@ from sklearn.ensemble import RandomForestRegressor
 from sklearn.metrics import mean_absolute_error, mean_squared_error, r2_score
 
 # Load Dataset
-def load_data():
-    file_path = "/mnt/data/Ameshousing.csv"
+def load_data(uploaded_file):
     try:
-        df = pd.read_csv(file_path)
-        return df
+        # Check file extension and read accordingly
+        if uploaded_file is not None:
+            if uploaded_file.name.endswith('.csv'):
+                df = pd.read_csv(uploaded_file)
+            elif uploaded_file.name.endswith(('.xls', '.xlsx')):
+                df = pd.read_excel(uploaded_file, engine='openpyxl')  # openpyxl for xlsx
+            else:
+                st.error("Unsupported file format. Please upload a CSV or Excel file.")
+                return None
+            return df
+        return None
     except Exception as e:
         st.error(f"Error loading dataset: {e}")
         return None
@@ -40,23 +48,27 @@ def train_model(X, y):
     model.fit(X_train, y_train)
     return model, X_test, y_test
 
+# Streamlit Web App
+st.title("Ames Housing Price Prediction")
+st.write("Upload a CSV or Excel file below to predict the house price.")
+
+uploaded_file = st.file_uploader("Choose a CSV or Excel file", type=["csv", "xls", "xlsx"])
+
 # Load & Process Data
-df = load_data()
+df = load_data(uploaded_file)
 X, y, scaler = preprocess_data(df)
 model, X_test, y_test = train_model(X, y)
+
 if model:
     joblib.dump(model, "model.pkl")
     joblib.dump(scaler, "scaler.pkl")
 
-# Streamlit Web App
-st.title("Ames Housing Price Prediction")
-st.write("Enter property details below to predict the house price.")
-
-if df is not None and model is not None:
-    # Create input fields for user
+    # User Input for Prediction
+    st.write("Enter property details below to predict the house price.")
     inputs = {}
-    for feature in df.drop(columns=['SalePrice'], errors='ignore').select_dtypes(include=[np.number]).columns:
-        inputs[feature] = st.number_input(feature, float(df[feature].min()), float(df[feature].max()), float(df[feature].mean()))
+    if df is not None:
+        for feature in df.drop(columns=['SalePrice'], errors='ignore').select_dtypes(include=[np.number]).columns:
+            inputs[feature] = st.number_input(feature, float(df[feature].min()), float(df[feature].max()), float(df[feature].mean()))
 
     # Predict Price
     if st.button("Predict Price"):
