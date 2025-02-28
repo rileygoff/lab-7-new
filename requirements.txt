@@ -1,5 +1,1 @@
-streamlit
-pandas
-scikit-learn
-openpyxl
-xlrd
+pip freeze > requirements.txt
